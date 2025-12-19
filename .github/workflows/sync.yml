@@ -1,0 +1,46 @@
+name: Manual Sync from Upstream
+
+permissions:
+  contents: write  # 赋予写权限，否则无法推送到你的仓库
+
+on:
+  workflow_dispatch:  # 允许在网页上添加一个“手动运行”的按钮
+
+jobs:
+  sync-tags-and-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 0 表示获取所有历史和tags，这很重要！
+          token: ${{ secrets.GITHUB_TOKEN }} # 使用GitHub默认的令牌
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+      - name: Add Upstream
+        # ↓↓↓↓↓ 请修改下面这一行，换成原作者仓库地址 ↓↓↓↓↓
+        run: git remote add upstream https://github.com/lvgl/lvgl_editor
+
+      - name: Fetch Upstream
+        run: git fetch upstream --tags # 获取原仓库所有分支和Tags
+
+      - name: Sync Master/Main Branch
+        run: |
+          # 这里假设主分支叫 main，如果是 master 请自行修改
+          git checkout master 
+          git merge upstream/master --allow-unrelated-histories
+          git push origin master
+
+      - name: Push Tags (Releases)
+        run: git push origin --tags # 这步最关键，同步Release版本
+
+      # 如果你还想同步 develop 分支，取消下面注释并修改
+      # - name: Sync Develop Branch
+      #   run: |
+      #     git checkout develop || git checkout -b develop upstream/develop
+      #     git merge upstream/develop
+      #     git push origin develop
